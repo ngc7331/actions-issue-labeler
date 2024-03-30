@@ -1,6 +1,6 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'issue-labeler'
+description: 'Label issues and assign maintainer based on the issue content.'
+author: 'ngc7331'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
@@ -9,15 +9,16 @@ branding:
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  BOT_GITHUB_TOKEN:
+    description: 'The issue labeler bot GITHUB_TOKEN.'
     required: true
-    default: '1000'
+  CONFIG_PATH:
+    description: 'The path to the configuration file.'
+    required: true
+    default: '.github/issue-labeler.yml'
 
 # Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+# outputs:
 
 runs:
   using: node20
