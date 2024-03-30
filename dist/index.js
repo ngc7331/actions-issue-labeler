@@ -30151,6 +30151,7 @@ async function run() {
         else {
             core.info(`no assignees to add`);
         }
+        core.info(`Done.`);
     }
     catch (error) {
         // Fail the workflow run if an error occurs
