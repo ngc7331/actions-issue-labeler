@@ -30153,7 +30153,7 @@ async function run() {
         });
         core.info(`filtered rules: [${filteredRules.map(rule => rule.name).join(', ')}]`);
         // handle adding/removing labels
-        const labels = filteredRules.map(rule => rule.label);
+        const labels = Array.from(new Set(filteredRules.map(rule => rule.label)));
         if (labels.length > 0) {
             if (currentLabels.length === 1 &&
                 currentLabels[0] === config.labelNonMatch) {
@@ -30172,7 +30172,7 @@ async function run() {
             core.info(`skip adding/removing labels`);
         }
         // handle adding assignees
-        const assignees = filteredRules
+        const assignees = Array.from(new Set(filteredRules
             .map(rule => rule.assignees)
             .flat()
             .filter(async (assignee) => {
@@ -30181,7 +30181,7 @@ async function run() {
                 core.warning(`assignee ${assignee} is not assignable to issue #${event.id}`);
             }
             return assignable;
-        });
+        })));
         if (assignees.length > 10) {
             core.warning(`assignees count exceeds the limit of 10, only the first 10 will be added`);
         }
@@ -30217,8 +30217,12 @@ async function tryMatch(event, match) {
     // FIXME: partial_ratio() calls full_process() by default, which does str.toLowerCase()
     //        and match.options.caseSensitive is not used
     //        this is not ideal if we want to support case-sensitive matching
-    return ((0, fuzzball_1.partial_ratio)(match.keyword, event.title + event.body) >=
-        match.options.threshold);
+    for (const line of (event.title + event.body).split('\n')) {
+        if ((0, fuzzball_1.partial_ratio)(match.keyword, line) >= match.options.threshold) {
+            return true;
+        }
+    }
+    return false;
 }
 exports.tryMatch = tryMatch;
 
