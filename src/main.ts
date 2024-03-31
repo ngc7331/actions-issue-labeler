@@ -82,7 +82,7 @@ export async function run(): Promise<void> {
     )
 
     // handle adding/removing labels
-    const labels = filteredRules.map(rule => rule.label)
+    const labels = Array.from(new Set(filteredRules.map(rule => rule.label)))
     if (labels.length > 0) {
       if (
         currentLabels.length === 1 &&
@@ -102,18 +102,26 @@ export async function run(): Promise<void> {
     }
 
     // handle adding assignees
-    const assignees = filteredRules
-      .map(rule => rule.assignees)
-      .flat()
-      .filter(async assignee => {
-        const assignable = await checkAssignable(octokit, event.id, assignee)
-        if (!assignable) {
-          core.warning(
-            `assignee ${assignee} is not assignable to issue #${event.id}`
-          )
-        }
-        return assignable
-      })
+    const assignees = Array.from(
+      new Set(
+        filteredRules
+          .map(rule => rule.assignees)
+          .flat()
+          .filter(async assignee => {
+            const assignable = await checkAssignable(
+              octokit,
+              event.id,
+              assignee
+            )
+            if (!assignable) {
+              core.warning(
+                `assignee ${assignee} is not assignable to issue #${event.id}`
+              )
+            }
+            return assignable
+          })
+      )
+    )
     if (assignees.length > 10) {
       core.warning(
         `assignees count exceeds the limit of 10, only the first 10 will be added`
