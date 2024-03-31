@@ -22,13 +22,17 @@ export async function run(): Promise<void> {
     core.info(`title: ${event.title}`)
     core.info(`=== body begins ===\n${event.body}\n==== body ends ====\n\n`)
 
-    const octokit = github.getOctokit(BOT_GITHUB_TOKEN)
+    const octokit =
+      event.type === 'local_test'
+        ? undefined
+        : github.getOctokit(BOT_GITHUB_TOKEN)
 
     const config = await parseConfig(await getConfig(octokit, CONFIG_PATH))
-    core.info(`config: \n${JSON.stringify(config, undefined, 2)}\n\n`)
-
+    if (core.isDebug()) {
+      core.debug(`config: \n${JSON.stringify(config, undefined, 2)}\n\n`)
+    }
     const currentLabels = await getLabels(octokit, event.id)
-    core.info(`current labels: ${currentLabels.join(', ')}`)
+    core.info(`current labels: [${currentLabels.join(', ')}]`)
 
     // iterate over the rules
     const matchedRules: Rule[] = []
@@ -58,7 +62,7 @@ export async function run(): Promise<void> {
     } // for rule
 
     const matchedRuleNames = matchedRules.map(rule => rule.name)
-    core.info(`matched rules: ${matchedRuleNames.join(', ')}`)
+    core.info(`matched rules: [${matchedRuleNames.join(', ')}]`)
 
     const filteredRules = matchedRules.filter(rule => {
       if (core.isDebug()) {
@@ -74,7 +78,7 @@ export async function run(): Promise<void> {
     })
 
     core.info(
-      `filtered rules: ${filteredRules.map(rule => rule.name).join(', ')}`
+      `filtered rules: [${filteredRules.map(rule => rule.name).join(', ')}]`
     )
 
     // handle adding/removing labels
@@ -87,7 +91,7 @@ export async function run(): Promise<void> {
         core.info(`removing label: ${config.labelNonMatch}`)
         await deleteLabel(octokit, event.id, config.labelNonMatch)
       }
-      core.info(`adding matched labels: ${labels.join(', ')}`)
+      core.info(`adding matched labels: [${labels.join(', ')}]`)
       await addLabels(octokit, event.id, labels)
     } else if (currentLabels.length === 0) {
       core.info(`adding non-match label: ${config.labelNonMatch}`)
@@ -116,7 +120,7 @@ export async function run(): Promise<void> {
       )
     }
     if (assignees.length > 0) {
-      core.info(`adding assignees: ${assignees.slice(0, 10).join(', ')}`)
+      core.info(`adding assignees: [${assignees.slice(0, 10).join(', ')}]`)
       await addAssignees(octokit, event.id, assignees.slice(0, 10))
     } else {
       core.info(`no assignees to add`)

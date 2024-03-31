@@ -1,6 +1,7 @@
 import * as github from '@actions/github'
 import type { Api } from '@actions/github/node_modules/@octokit/plugin-rest-endpoint-methods/dist-types/types'
 import * as yaml from 'yaml'
+import * as fs from 'fs'
 
 import { extractObj } from './utils'
 import type {
@@ -27,7 +28,14 @@ export interface Config {
   rules: Rule[]
 }
 
-export async function getConfig(octokit: Api, path: string): Promise<object> {
+export async function getConfig(
+  octokit: Api | undefined,
+  path: string
+): Promise<object> {
+  if (octokit === undefined) {
+    return getConfigLocal(path)
+  }
+
   const resp = await octokit.rest.repos.getContent({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -45,6 +53,17 @@ export async function getConfig(octokit: Api, path: string): Promise<object> {
   }
 
   const obj = yaml.parse(Buffer.from(data.content, 'base64').toString('utf-8'))
+  if (typeof obj !== 'object') {
+    throw new Error(`Failed to parse config file: ${path}`)
+  }
+
+  return obj
+}
+
+export async function getConfigLocal(path: string): Promise<object> {
+  const data = fs.readFileSync(path, { encoding: 'utf-8' })
+
+  const obj = yaml.parse(data)
   if (typeof obj !== 'object') {
     throw new Error(`Failed to parse config file: ${path}`)
   }

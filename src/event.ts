@@ -1,7 +1,8 @@
+import * as core from '@actions/core'
 import * as github from '@actions/github'
 
 export interface Event {
-  type: 'issues' | 'issue_comment'
+  type: 'issues' | 'issue_comment' | 'local_test'
   id: number
   title: string
   body: string
@@ -25,6 +26,14 @@ export async function parseEvent(): Promise<Event> {
         id: payload.issue?.number || -1,
         title: '',
         body: payload.comment?.body
+      }
+    case undefined:
+      core.warning('No event name found, assuming local test')
+      return {
+        type: 'local_test',
+        id: -1,
+        title: core.getInput('LOCAL_TEST_TITLE'),
+        body: core.getInput('LOCAL_TEST_BODY')
       }
     default:
       throw new Error(`Unsupported event: ${eventName}`)

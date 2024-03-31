@@ -2,10 +2,14 @@ import * as github from '@actions/github'
 import type { Api } from '@actions/github/node_modules/@octokit/plugin-rest-endpoint-methods/dist-types/types'
 
 export async function addLabels(
-  octokit: Api,
+  octokit: Api | undefined,
   issue_number: number,
   labels: string[]
 ): Promise<void> {
+  if (octokit === undefined) {
+    return
+  }
+
   const resp = await octokit.rest.issues.addLabels({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -21,10 +25,14 @@ export async function addLabels(
 }
 
 export async function deleteLabel(
-  octokit: Api,
+  octokit: Api | undefined,
   issue_number: number,
   label: string
 ): Promise<void> {
+  if (octokit === undefined) {
+    return
+  }
+
   const resp = await octokit.rest.issues.removeLabel({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -40,9 +48,13 @@ export async function deleteLabel(
 }
 
 export async function getLabels(
-  octokit: Api,
+  octokit: Api | undefined,
   issue_number: number
 ): Promise<string[]> {
+  if (octokit === undefined) {
+    return []
+  }
+
   const resp = await octokit.rest.issues.listLabelsOnIssue({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,

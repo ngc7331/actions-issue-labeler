@@ -29719,6 +29719,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.addAssignees = exports.checkAssignable = void 0;
 const github = __importStar(__nccwpck_require__(5438));
 async function checkAssignable(octokit, issue_number, assignee) {
+    if (octokit === undefined) {
+        return true;
+    }
     const resp = await octokit.rest.issues.checkUserCanBeAssignedToIssue({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -29729,6 +29732,9 @@ async function checkAssignable(octokit, issue_number, assignee) {
 }
 exports.checkAssignable = checkAssignable;
 async function addAssignees(octokit, issue_number, assignees) {
+    if (octokit === undefined) {
+        return;
+    }
     const resp = await octokit.rest.issues.addAssignees({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -29773,11 +29779,15 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseConfig = exports.getConfig = void 0;
+exports.parseConfig = exports.getConfigLocal = exports.getConfig = void 0;
 const github = __importStar(__nccwpck_require__(5438));
 const yaml = __importStar(__nccwpck_require__(4083));
+const fs = __importStar(__nccwpck_require__(7147));
 const utils_1 = __nccwpck_require__(1314);
 async function getConfig(octokit, path) {
+    if (octokit === undefined) {
+        return getConfigLocal(path);
+    }
     const resp = await octokit.rest.repos.getContent({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -29798,6 +29808,15 @@ async function getConfig(octokit, path) {
     return obj;
 }
 exports.getConfig = getConfig;
+async function getConfigLocal(path) {
+    const data = fs.readFileSync(path, { encoding: 'utf-8' });
+    const obj = yaml.parse(data);
+    if (typeof obj !== 'object') {
+        throw new Error(`Failed to parse config file: ${path}`);
+    }
+    return obj;
+}
+exports.getConfigLocal = getConfigLocal;
 function parseMatch(obj, defaultMode, defaultFuzzyOptions, defaultRegexOptions) {
     const keyword = (0, utils_1.extractObj)(obj, 'keyword') || '';
     if (typeof keyword !== 'string' || keyword === '') {
@@ -29919,6 +29938,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseEvent = void 0;
+const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 async function parseEvent() {
     const ctx = github.context;
@@ -29938,6 +29958,14 @@ async function parseEvent() {
                 id: payload.issue?.number || -1,
                 title: '',
                 body: payload.comment?.body
+            };
+        case undefined:
+            core.warning('No event name found, assuming local test');
+            return {
+                type: 'local_test',
+                id: -1,
+                title: core.getInput('LOCAL_TEST_TITLE'),
+                body: core.getInput('LOCAL_TEST_BODY')
             };
         default:
             throw new Error(`Unsupported event: ${eventName}`);
@@ -29980,6 +30008,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getLabels = exports.deleteLabel = exports.addLabels = void 0;
 const github = __importStar(__nccwpck_require__(5438));
 async function addLabels(octokit, issue_number, labels) {
+    if (octokit === undefined) {
+        return;
+    }
     const resp = await octokit.rest.issues.addLabels({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -29992,6 +30023,9 @@ async function addLabels(octokit, issue_number, labels) {
 }
 exports.addLabels = addLabels;
 async function deleteLabel(octokit, issue_number, label) {
+    if (octokit === undefined) {
+        return;
+    }
     const resp = await octokit.rest.issues.removeLabel({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -30004,6 +30038,9 @@ async function deleteLabel(octokit, issue_number, label) {
 }
 exports.deleteLabel = deleteLabel;
 async function getLabels(octokit, issue_number) {
+    if (octokit === undefined) {
+        return [];
+    }
     const resp = await octokit.rest.issues.listLabelsOnIssue({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
@@ -30068,11 +30105,15 @@ async function run() {
         core.info(`event: ${event.type} #${event.id}`);
         core.info(`title: ${event.title}`);
         core.info(`=== body begins ===\n${event.body}\n==== body ends ====\n\n`);
-        const octokit = github.getOctokit(BOT_GITHUB_TOKEN);
+        const octokit = event.type === 'local_test'
+            ? undefined
+            : github.getOctokit(BOT_GITHUB_TOKEN);
         const config = await (0, config_1.parseConfig)(await (0, config_1.getConfig)(octokit, CONFIG_PATH));
-        core.info(`config: \n${JSON.stringify(config, undefined, 2)}\n\n`);
+        if (core.isDebug()) {
+            core.debug(`config: \n${JSON.stringify(config, undefined, 2)}\n\n`);
+        }
         const currentLabels = await (0, label_1.getLabels)(octokit, event.id);
-        core.info(`current labels: ${currentLabels.join(', ')}`);
+        core.info(`current labels: [${currentLabels.join(', ')}]`);
         // iterate over the rules
         const matchedRules = [];
         for (const rule of config.rules) {
@@ -30097,7 +30138,7 @@ async function run() {
             }
         } // for rule
         const matchedRuleNames = matchedRules.map(rule => rule.name);
-        core.info(`matched rules: ${matchedRuleNames.join(', ')}`);
+        core.info(`matched rules: [${matchedRuleNames.join(', ')}]`);
         const filteredRules = matchedRules.filter(rule => {
             if (core.isDebug()) {
                 core.debug(`trying rule: ${rule.name}`);
@@ -30110,7 +30151,7 @@ async function run() {
                 return hit;
             });
         });
-        core.info(`filtered rules: ${filteredRules.map(rule => rule.name).join(', ')}`);
+        core.info(`filtered rules: [${filteredRules.map(rule => rule.name).join(', ')}]`);
         // handle adding/removing labels
         const labels = filteredRules.map(rule => rule.label);
         if (labels.length > 0) {
@@ -30119,7 +30160,7 @@ async function run() {
                 core.info(`removing label: ${config.labelNonMatch}`);
                 await (0, label_1.deleteLabel)(octokit, event.id, config.labelNonMatch);
             }
-            core.info(`adding matched labels: ${labels.join(', ')}`);
+            core.info(`adding matched labels: [${labels.join(', ')}]`);
             await (0, label_1.addLabels)(octokit, event.id, labels);
         }
         else if (currentLabels.length === 0) {
@@ -30145,7 +30186,7 @@ async function run() {
             core.warning(`assignees count exceeds the limit of 10, only the first 10 will be added`);
         }
         if (assignees.length > 0) {
-            core.info(`adding assignees: ${assignees.slice(0, 10).join(', ')}`);
+            core.info(`adding assignees: [${assignees.slice(0, 10).join(', ')}]`);
             await (0, assignee_1.addAssignees)(octokit, event.id, assignees.slice(0, 10));
         }
         else {
