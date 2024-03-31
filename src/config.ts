@@ -25,6 +25,7 @@ export interface Config {
   defaultFuzzyOptions: FuzzyMatchOptions
   defaultRegexOptions: RegexMatchOptions
   labelNonMatch: string
+  labelNoAuto: string
   rules: Rule[]
 }
 
@@ -121,6 +122,7 @@ export async function parseConfig(obj: object): Promise<Config> {
       caseSensitive: extractObj(obj, 'default.case-sensitive') || false
     },
     labelNonMatch: extractObj(obj, 'label-nonmatch') || 'ambigous',
+    labelNoAuto: extractObj(obj, 'label-no-auto') || 'no-auto-label',
     rules: []
   }
   const rules: object = extractObj(obj, 'rules') || {}

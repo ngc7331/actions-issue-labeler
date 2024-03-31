@@ -34,6 +34,12 @@ export async function run(): Promise<void> {
     const currentLabels = await getLabels(octokit, event.id)
     core.info(`current labels: [${currentLabels.join(', ')}]`)
 
+    // handle no-auto label
+    if (currentLabels.includes(config.labelNoAuto)) {
+      core.info(`skip auto-labeling due to label: ${config.labelNoAuto}`)
+      return
+    }
+
     // iterate over the rules
     const matchedRules: Rule[] = []
     for (const rule of config.rules) {

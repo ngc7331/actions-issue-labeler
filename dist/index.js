@@ -29858,6 +29858,7 @@ async function parseConfig(obj) {
             caseSensitive: (0, utils_1.extractObj)(obj, 'default.case-sensitive') || false
         },
         labelNonMatch: (0, utils_1.extractObj)(obj, 'label-nonmatch') || 'ambigous',
+        labelNoAuto: (0, utils_1.extractObj)(obj, 'label-no-auto') || 'no-auto-label',
         rules: []
     };
     const rules = (0, utils_1.extractObj)(obj, 'rules') || {};
@@ -30114,6 +30115,11 @@ async function run() {
         }
         const currentLabels = await (0, label_1.getLabels)(octokit, event.id);
         core.info(`current labels: [${currentLabels.join(', ')}]`);
+        // handle no-auto label
+        if (currentLabels.includes(config.labelNoAuto)) {
+            core.info(`skip auto-labeling due to label: ${config.labelNoAuto}`);
+            return;
+        }
         // iterate over the rules
         const matchedRules = [];
         for (const rule of config.rules) {
